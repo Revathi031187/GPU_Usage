@@ -24,28 +24,36 @@ export const MODELS = [
 // purpose presets: tokens per LLM call + typical calls/task
 // `intensityNeed` (1–5) = how demanding the workload is; `wQ`/`wI` = how much the
 // purpose weights model quality vs. intensity when scoring fit (wQ + wI = 1).
-// Recommended frontier model, self-hosted model, GPU, node count, and hybrid split
-// are no longer hardcoded here — see src/reco/gridSearch.js, which computes them
-// from actual usage via a deterministic grid-search over calc.js's cost/capacity
-// math, checked against a trained utilization-risk classifier (tools/ml/README.md).
 export const PURPOSES = {
   coding: { name: 'Coding assistant', in: 4000, out: 1500, calls: 1.5, seats: 400, tasks: 90,
             desc: 'IDE completions + chat across an eng org. Output-heavy, agent chains common.',
+            best: 'sonnet', bestWhy: 'Strong coding quality with balanced cost; handles agent chains well.',
+            bestOpen: 'llama405b', bestOpenWhy: 'Near-frontier open weights — best self-hosted coder when you keep IP in-house.',
             intensityNeed: 4, wQ: 0.5, wI: 0.5 },
   agent:  { name: 'Agentic workflow', in: 8000, out: 3000, calls: 4, seats: 200, tasks: 40,
             desc: 'Multi-step tool-using agents. Several LLM calls per task, large context.',
+            best: 'sonnet', bestWhy: 'Reliable tool-use over long context without frontier (Opus) pricing.',
+            bestOpen: 'llama405b', bestOpenWhy: 'Highest-intensity open model for multi-step tool use on your own GPUs.',
             intensityNeed: 5, wQ: 0.4, wI: 0.6 },
   chat:   { name: 'Chat assistant / copilot', in: 500, out: 800, calls: 1, seats: 1000, tasks: 30,
             desc: 'Internal Q&A copilot. Short prompts, conversational output.',
+            best: 'gpt4omini', bestWhy: 'Fast and cheap — plenty for short conversational Q&A at high seat counts.',
+            bestOpen: 'llama8b', bestOpenWhy: 'Tiny, fast open model — cheapest to self-host for high-volume short chat.',
             intensityNeed: 2, wQ: 0.6, wI: 0.4 },
   rag:    { name: 'RAG / knowledge search', in: 3000, out: 500, calls: 1, seats: 500, tasks: 40,
             desc: 'Retrieval-augmented answers. Big input context, concise output.',
+            best: 'gemini', bestWhy: 'Large context window suits big retrieval inputs; concise, low-cost output.',
+            bestOpen: 'mixtral', bestOpenWhy: 'Apache-2.0 MoE with strong long-context handling for retrieval inputs.',
             intensityNeed: 3, wQ: 0.5, wI: 0.5 },
   summ:   { name: 'Summarization / extraction', in: 6000, out: 800, calls: 1, seats: 150, tasks: 200,
             desc: 'Documents in, structured summaries out. Input-dominated.',
+            best: 'haiku', bestWhy: 'Cheap, fast, and accurate enough for input-heavy summarization at volume.',
+            bestOpen: 'gemma27b', bestOpenWhy: 'Compact, efficient open model — cheap to self-host for input-heavy summarization.',
             intensityNeed: 3, wQ: 0.6, wI: 0.4 },
   annot:  { name: 'Data annotation / labeling', in: 1500, out: 200, calls: 1, seats: 40, tasks: 1500,
             desc: 'LLM-as-labeler over a dataset. Very high call volume, tiny outputs.',
+            best: 'gpt4omini', bestWhy: 'Lowest token cost for very high-volume labeling with tiny outputs.',
+            bestOpen: 'llama8b', bestOpenWhy: 'Smallest open model — highest throughput per GPU for bulk labeling.',
             intensityNeed: 2, wQ: 0.55, wI: 0.45 },
 }
 

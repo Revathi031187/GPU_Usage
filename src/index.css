@@ -54,8 +54,7 @@ header.top{
 .brand{display:flex; align-items:center; gap:11px; margin-right:auto}
 .logo{
   width:34px; height:34px; border-radius:8px; flex:none;
-  background:linear-gradient(135deg,var(--accent),var(--accent-strong));
-  display:grid; place-items:center; color:#fff; font-family:var(--mono); font-weight:700; font-size:17px;
+  object-fit:contain; background:#fff;
   box-shadow:var(--shadow);
 }
 .brand h1{font-size:15px; margin:0; letter-spacing:-.01em; line-height:1.15}
@@ -170,7 +169,6 @@ svg .tk-lab{fill:var(--ink-3); font-family:var(--mono)}
 @media (max-width:820px){ .benefits{grid-template-columns:1fr 1fr} }
 @media (max-width:460px){ .benefits{grid-template-columns:1fr} }
 .bcard{border:1px solid var(--border); border-radius:11px; padding:13px; background:var(--surface-2)}
-.bcard .ic{width:32px; height:32px; border-radius:9px; display:grid; place-items:center; background:var(--accent-soft); font-size:16px; margin-bottom:9px}
 .bcard h3{font-size:13px; margin:0 0 4px; letter-spacing:-.01em}
 .bcard p{font-size:12px; color:var(--ink-2); margin:0; line-height:1.42}
 .foot{max-width:1220px; margin:0 auto; padding:6px 22px 34px; font-size:11.5px; color:var(--ink-3); line-height:1.5}

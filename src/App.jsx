@@ -10,6 +10,10 @@ import {
   maxStreamsPerNode, nodesThroughput, nodesConcurrency, peakConcurrentUsers,
 } from './calc.js'
 import { buildChart, buildBenchmark } from './charts.js'
+import { recommendFor } from './reco/gridSearch.js'
+import { predictRisk } from './reco/treeModel.js'
+import { buildRiskFeatures } from './reco/features.js'
+import riskModel from './ml/utilization-risk-model.json' with { type: 'json' }
 
 export default function App() {
   const [S, setS] = useState(DEFAULT_STATE)
@@ -27,6 +31,12 @@ export default function App() {
   const f = useMemo(() => forecast(S), [S])
   const chart = useMemo(() => buildChart(S, f), [S, f])
   const bench = useMemo(() => buildBenchmark(S, f), [S, f])
+  // Recomputed only on purpose change, not every keystroke — so a manual override
+  // (picking a different GPU/model by hand) isn't silently refought as the user
+  // tweaks other scenario inputs. applyPurpose below auto-applies these picks
+  // once, at the moment a purpose is selected; recomputing here just keeps the
+  // displayed recommendation in sync with whatever applyPurpose just set.
+  const reco = useMemo(() => recommendFor(S.purpose, S), [S.purpose]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleTheme = () => {
     const cur = theme
@@ -36,7 +46,13 @@ export default function App() {
 
   const applyPurpose = (k) => {
     const p = PURPOSES[k]
-    set({ purpose: k, calls: p.calls, seats: p.seats, tasks: p.tasks })
+    const patch = { purpose: k, calls: p.calls, seats: p.seats, tasks: p.tasks }
+    const rec = recommendFor(k, { ...S, ...patch })
+    set({
+      ...patch,
+      model: rec.frontierModel, pin: rec.frontierPin, pout: rec.frontierPout,
+      localModel: rec.localModel, gpu: rec.gpu, frontier: rec.frontierPct,
+    })
   }
   const selectModelById = (id) => {
     const m = model(id)
@@ -52,13 +68,13 @@ export default function App() {
       <header className="top">
         <div className="top-inner">
           <div className="brand">
-            <div className="logo">Σ</div>
+            <img className="logo" src="/LV_Brand mnemonic.png" alt="LatentView" />
             <div>
-              <div className="eyebrow">MVP · Inference Economics</div>
-              <h1>AI Cost Calculator</h1>
+              <div className="eyebrow"></div>
+              <h1>AI Pulse</h1>
             </div>
           </div>
-          <button className="theme-btn" type="button" onClick={toggleTheme}>◐ Theme</button>
+          <button className="theme-btn" type="button" onClick={toggleTheme}>Theme</button>
         </div>
       </header>
 
@@ -74,31 +90,31 @@ export default function App() {
                 {Object.entries(PURPOSES).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}
               </select>
               <div className="mini">{p.desc}</div>
-              {p.best && (
-                <div className="callout" style={{ marginTop: 8, alignItems: 'center' }}>
-                  <span className="chip a" style={{ flex: 'none' }}>★ Best</span>
-                  <span style={{ flex: 1 }}>
-                    <b>{model(p.best).name}</b>{' '}
-                    <span className="vend num">{'$' + model(p.best).in + '/$' + model(p.best).out}</span>
-                    <div className="mini" style={{ marginTop: 2 }}>{p.bestWhy}</div>
-                  </span>
-                  {S.model === p.best
-                    ? <span className="chip g" style={{ flex: 'none' }}>✓ selected</span>
-                    : <button type="button" className="theme-btn" style={{ flex: 'none' }} onClick={() => selectModelById(p.best)}>Use</button>}
+              <div className="callout" style={{ marginTop: 8, alignItems: 'center' }}>
+                <span className="chip a" style={{ flex: 'none' }}>Best</span>
+                <span style={{ flex: 1 }}>
+                  <b>{model(reco.frontierModel).name}</b>{' '}
+                  <span className="vend num">{'$' + model(reco.frontierModel).in + '/$' + model(reco.frontierModel).out}</span>
+                  <div className="mini" style={{ marginTop: 2 }}>{reco.rationale.frontier}</div>
+                </span>
+                {S.model === reco.frontierModel
+                  ? <span className="chip g" style={{ flex: 'none' }}>selected</span>
+                  : <button type="button" className="theme-btn" style={{ flex: 'none' }} onClick={() => selectModelById(reco.frontierModel)}>Use</button>}
+              </div>
+              <div className="callout" style={{ marginTop: 8, alignItems: 'center' }}>
+                <span className={'chip ' + (reco.risk.label === 'underutilized' ? 'b' : 'n')} style={{ flex: 'none' }}>Open</span>
+                <span style={{ flex: 1 }}>
+                  <b>{model(reco.localModel).name}</b>{' on '}<b>{gpu(reco.gpu).name.replace(/^\d+× /, '')}</b>{' '}
+                  <span className="vend">{model(reco.localModel).license + ' · free, self-hosted'}</span>
+                  <div className="mini" style={{ marginTop: 2 }}>{reco.rationale.local} {reco.rationale.split}</div>
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 'none' }}>
+                  <button type="button" className="theme-btn"
+                    onClick={() => set({ localModel: reco.localModel, gpu: reco.gpu, frontier: reco.frontierPct })}>Use</button>
+                  <button type="button" className="theme-btn"
+                    onClick={() => set({ cmpA: reco.frontierModel, cmpB: reco.localModel })}>Compare</button>
                 </div>
-              )}
-              {p.bestOpen && (
-                <div className="callout" style={{ marginTop: 8, alignItems: 'center' }}>
-                  <span className="chip n" style={{ flex: 'none' }}>🖥️ Open</span>
-                  <span style={{ flex: 1 }}>
-                    <b>{model(p.bestOpen).name}</b>{' '}
-                    <span className="vend">{model(p.bestOpen).license + ' · free, self-hosted'}</span>
-                    <div className="mini" style={{ marginTop: 2 }}>{p.bestOpenWhy}</div>
-                  </span>
-                  <button type="button" className="theme-btn" style={{ flex: 'none' }}
-                    onClick={() => set({ cmpA: p.best, cmpB: p.bestOpen })}>Compare</button>
-                </div>
-              )}
+              </div>
             </div>
 
             <div className="field">
@@ -281,7 +297,7 @@ export default function App() {
             <section className="panel">
               <div className="phead"><h2>Cost by model</h2><span className="hint">this workload, per month</span></div>
               <div className="pbody" style={{ padding: 0 }}>
-                <ModelTable S={S} f={f} onSelect={selectModelById} onSort={(k) => {
+                <ModelTable S={S} f={f} reco={reco} onSelect={selectModelById} onSort={(k) => {
                   set(S.sortK === k ? { sortDir: S.sortDir * -1 } : { sortK: k, sortDir: 1 })
                 }} />
               </div>
@@ -306,7 +322,6 @@ export default function App() {
               <div className="benefits">
                 {BENEFITS.map((b, i) => (
                   <div className="bcard" key={i}>
-                    <div className="ic">{b.ic}</div>
                     <h3>{b.h}</h3>
                     <p>{b.p}</p>
                   </div>
@@ -397,15 +412,15 @@ function Compare({ S, f, P, onSet }) {
   let headline
   if (fitA === fitB && costA != null && costB != null) {
     const cheaper = costA <= costB ? A : B
-    headline = <span>💡 <b>{A.name}</b> and <b>{B.name}</b> score the same fit ({fitA.toFixed(0)}/100) for {P.name} — <b>{cheaper.name}</b> wins on cost.</span>
+    headline = <span><b>{A.name}</b> and <b>{B.name}</b> score the same fit ({fitA.toFixed(0)}/100) for {P.name} — <b>{cheaper.name}</b> wins on cost.</span>
   } else if (costA != null && costB != null) {
     const cheaper = costA < costB ? A : B
     const sameWinner = bestFit === cheaper
     headline = sameWinner
-      ? <span>💡 <b>{bestFit.name}</b> wins on both fit ({(bestFit === A ? fitA : fitB).toFixed(0)}/100) and cost for the {P.name} workload — the clear pick.</span>
-      : <span>💡 <b>{bestFit.name}</b> is the better fit ({(bestFit === A ? fitA : fitB).toFixed(0)}/100 vs {(bestFit === A ? fitB : fitA).toFixed(0)}) for {P.name}, but <b>{cheaper.name}</b> is {fmtFull(Math.abs(costA - costB))}/mo cheaper. Pick fit for hard tasks, cost for volume.</span>
+      ? <span><b>{bestFit.name}</b> wins on both fit ({(bestFit === A ? fitA : fitB).toFixed(0)}/100) and cost for the {P.name} workload — the clear pick.</span>
+      : <span><b>{bestFit.name}</b> is the better fit ({(bestFit === A ? fitA : fitB).toFixed(0)}/100 vs {(bestFit === A ? fitB : fitA).toFixed(0)}) for {P.name}, but <b>{cheaper.name}</b> is {fmtFull(Math.abs(costA - costB))}/mo cheaper. Pick fit for hard tasks, cost for volume.</span>
   } else {
-    headline = <span>💡 For {P.name}, <b>{bestFit.name}</b> has the higher fit ({(bestFit === A ? fitA : fitB).toFixed(0)}/100) on quality + intensity. One side is GPU-served — weigh it against <b>Hardware &amp; capacity</b> above.</span>
+    headline = <span>For {P.name}, <b>{bestFit.name}</b> has the higher fit ({(bestFit === A ? fitA : fitB).toFixed(0)}/100) on quality + intensity. One side is GPU-served — weigh it against <b>Hardware &amp; capacity</b> above.</span>
   }
 
   const verdicts = [
@@ -506,10 +521,10 @@ function YearTable({ S, f }) {
 }
 
 /* ---------- Model table ---------- */
-function ModelTable({ S, f, onSelect, onSort }) {
+function ModelTable({ S, f, reco, onSelect, onSort }) {
   const t = f.tokens
   const P = PURPOSES[S.purpose]
-  const bestId = P.best
+  const bestIds = [reco.frontierModel, reco.localModel]
   let rows = MODELS.map((m) => ({ m, cost: m.local ? null : apiCost(m, t.inTok, t.outTok), fit: fitScore(m, P) }))
   const priced = rows.filter((r) => r.cost != null)
   const maxCost = Math.max(...priced.map((r) => r.cost), 1)
@@ -542,7 +557,7 @@ function ModelTable({ S, f, onSelect, onSort }) {
               <tr key={m.id} className={isSel ? 'sel' : ''} onClick={() => onSelect(m.id)}>
                 <td>
                   <span className="dot" style={{ background: m.color }}></span>{m.name}
-                  {m.id === bestId && <span className="chip a" style={{ marginLeft: 6, padding: '1px 6px' }} title="Recommended for the selected purpose">★ Best</span>}
+                  {bestIds.includes(m.id) && <span className="chip a" style={{ marginLeft: 6, padding: '1px 6px' }} title="Recommended for the selected purpose">Best</span>}
                   <div className="vend">{m.vendor} · Q {m.quality.toFixed(1)} · I {m.intensity.toFixed(1)}</div>
                 </td>
                 <td><span className={'chip ' + (m.tier === 'Frontier' ? 'b' : m.local ? 'a' : 'n')}>{m.tier}</span></td>
@@ -591,6 +606,13 @@ function Capacity({ S, f }) {
   const mult = apiPerM / localPerM
   const power = S.opex * OPEX_REF.powerShare, rack = S.opex * (1 - OPEX_REF.powerShare)
   const perDevApi = apiCostSelected(S, t.inTok / S.seats, t.outTok / S.seats)
+  // Live utilization-risk read for whatever GPU/model is actually selected right now
+  // (may differ from the purpose-level recommendation if the user overrode it by hand).
+  const risk = useMemo(() => (
+    c.nodes === 0
+      ? { label: 'no_local_hosting', confidence: 1 }
+      : predictRisk(riskModel, buildRiskFeatures(S, S.gpu, S.localModel))
+  ), [S, c.nodes])
 
   const rows = [
     ['Monthly LLM calls', num(t.calls)],
@@ -637,6 +659,20 @@ function Capacity({ S, f }) {
         <span className={'chip ' + chipCls}>{chipTxt}</span>
         <span>Local inference is <b className="num">{isFinite(mult) ? mult.toFixed(1) : '—'}×</b> cheaper per token than {model(S.model).name} here — {band}</span>
       </div>
+
+      {risk.label !== 'no_local_hosting' && (
+        <div className="callout" style={{ marginTop: 12 }}>
+          <span className={'chip ' + (risk.label === 'well_utilized' ? 'g' : risk.label === 'overutilized' ? 'a' : 'b')}>
+            {risk.label.replace('_', ' ')}
+          </span>
+          <span>
+            ML utilization check ({Math.round(risk.confidence * 100)}% confidence): {c.nodes} node{c.nodes === 1 ? '' : 's'} of {g.name.replace(/^\d+× /, '')} running {lm.name}{' — '}
+            {risk.label === 'underutilized' && 'this hardware is mostly idle at the current seat count — a smaller GPU, fewer local seats, or a smaller model would waste less spend.'}
+            {risk.label === 'overutilized' && 'little headroom left for traffic above the modeled peak — add a node or relax the SLA target.'}
+            {risk.label === 'well_utilized' && 'this sizing matches the predicted load well.'}
+          </span>
+        </div>
+      )}
 
       <div style={{ marginTop: 14 }}>
         <div className="k-label" style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.07em', color: 'var(--ink-2)', fontWeight: 600, marginBottom: 8 }}>

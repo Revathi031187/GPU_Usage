@@ -4,3 +4,11 @@ dist-ssr
 *.local
 .vite
 .DS_Store
+
+# tools/ml — regenerate via tools/ml/README.md; only src/ml/*.json ships to the app
+tools/ml/venv/
+tools/ml/data/
+tools/ml/data.json
+tools/ml/parity_scenarios.json
+tools/ml/trained_model.joblib
+__pycache__/

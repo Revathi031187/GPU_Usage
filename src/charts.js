@@ -53,10 +53,10 @@ export function buildChart(S, f) {
     : 'not within ' + S.horizon + ' years at these inputs'
   let verdict
   if (totalSave > 0) {
-    verdict = '<span>💡 <b>' + fmt(totalSave) + '</b> cumulative saving over ' + S.horizon + ' years — the hybrid path pays back in <b>' + pbTxt + '</b>. ' +
+    verdict = '<span><b>' + fmt(totalSave) + '</b> cumulative saving over ' + S.horizon + ' years — the hybrid path pays back in <b>' + pbTxt + '</b>. ' +
       'Baseline all-API spend reaches <b>' + fmt(f.cumApi) + '</b> vs <b>' + fmt(f.cumHybrid) + '</b> hybrid.</span>'
   } else {
-    verdict = '<span>⚠️ At this scale the all-API path is still cheaper over ' + S.horizon + ' years (payback ' + pbTxt + '). ' +
+    verdict = '<span>At this scale the all-API path is still cheaper over ' + S.horizon + ' years (payback ' + pbTxt + '). ' +
       'Local GPU economics turn positive at higher volume, more owned hardware, or a larger local share.</span>'
   }
 
@@ -97,7 +97,7 @@ export function buildBenchmark(S, f) {
   else if (spend < RAMP.p95) pos = 'around the Ramp <b>average</b> ($140,842/mo) — top decile of AI spenders'
   else if (spend < RAMP.p99) pos = 'between the 95th and 99th percentile — among the very heaviest AI spenders'
   else pos = '<b>above</b> Ramp’s 99th percentile ($831K/mo) — hyperscale token spend'
-  const note = '<span>📊 Your all-API spend of <b class="num">' + fmt(spend) + '/mo</b> sits ' + pos + '. You model <b>' + pct(S.growth) + '/yr</b> growth vs Gartner’s <b>' + GARTNER_GROWTH + '%</b> industry forecast for 2026.</span>'
+  const note = '<span>Your all-API spend of <b class="num">' + fmt(spend) + '/mo</b> sits ' + pos + '. You model <b>' + pct(S.growth) + '/yr</b> growth vs Gartner’s <b>' + GARTNER_GROWTH + '%</b> industry forecast for 2026.</span>'
 
   return { svg: s, note }
 }

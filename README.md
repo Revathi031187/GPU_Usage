@@ -30,6 +30,20 @@ benchmarks, a multi-year forecast, a per-model cost table, and hardware capacity
 | [src/charts.js](src/charts.js) | SVG builders for the benchmark bar and forecast chart |
 | [src/App.jsx](src/App.jsx)     | UI — controls, KPIs, tables, capacity, benefits |
 | [src/index.css](src/index.css) | Full theme + layout (ported from the original) |
+| [src/reco/gridSearch.js](src/reco/gridSearch.js) | Recommendation engine — picks frontier model, self-hosted model, GPU, node count, and hybrid split |
+| [src/reco/treeModel.js](src/reco/treeModel.js) | Runs the trained utilization-risk classifier (no ML runtime dependency) |
+| [src/ml/utilization-risk-model.json](src/ml/utilization-risk-model.json) | Trained model artifact — see [tools/ml/README.md](tools/ml/README.md) to retrain |
+
+## Recommendation engine
+
+Each purpose's recommended frontier model, self-hosted model, GPU platform, node
+count, and hybrid frontier/local split are computed, not hardcoded — a deterministic
+grid-search over the cost/capacity math in `calc.js` picks the combo, checked
+against a small trained classifier that flags whether a given local-model/GPU
+pairing would be under/well/over-utilized for the predicted usage (the one call the
+formulas alone don't cleanly express — e.g. a large model on a big GPU node but only
+a handful of actual users). See [tools/ml/README.md](tools/ml/README.md) to
+regenerate the synthetic training data or retrain that classifier.
 
 ## Getting started
 

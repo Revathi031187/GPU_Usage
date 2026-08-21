@@ -91,13 +91,27 @@ export function nodesConcurrency(S, peakUsersEff) {
 export function nodesFor(S, outTokMonth, peakUsersEff) {
   return Math.max(nodesThroughput(S, outTokMonth), nodesConcurrency(S, peakUsersEff))
 }
+// ---------- generic asset economics (any capex+opex+depreciation asset, not just GPU nodes) ----------
+export function assetCapexNet(listPrice, discPct = 0) {
+  return listPrice * (1 - discPct / 100)
+}
+export function assetMonthlyOpex(opexYr, subYr = 0) {
+  return (opexYr + subYr) / 12
+}
+export function assetMonthlyDepreciation(capexNet, years) {
+  return years > 0 ? capexNet / (years * 12) : 0
+}
+export function assetMonthlyTCO(capexNet, opexYr, subYr, years) {
+  return assetMonthlyOpex(opexYr, subYr) + assetMonthlyDepreciation(capexNet, years)
+}
+
 export function nodeMonthlyRun(S) {
   // opex + subscription per node per month (recurring, excl capex)
-  return (S.opex + S.sub) / 12
+  return assetMonthlyOpex(S.opex, S.sub)
 }
 export function nodeCapex(S) {
   const g = gpu(S.gpu)
-  return g.capex * (1 - S.disc / 100)
+  return assetCapexNet(g.capex, S.disc)
 }
 
 // build month-by-month forecast
@@ -149,7 +163,7 @@ export function forecast(S) {
     nodes: nodesFor(S, base.outTok * localShare, peakConcurrentUsers(S) * localShare),
   }
   cur.runMonth = cur.nodes * nodeMonthlyRun(S)
-  cur.hybridMonth = cur.frontierMonth + cur.runMonth + (S.owns === 'yes' ? 0 : (cur.nodes * nodeCapex(S)) / (S.dep * 12))
+  cur.hybridMonth = cur.frontierMonth + cur.runMonth + (S.owns === 'yes' ? 0 : cur.nodes * assetMonthlyDepreciation(nodeCapex(S), S.dep))
   cur.savingMonth = cur.apiMonth - cur.hybridMonth
 
   return { apiSeries, hybSeries, labels, payback, cur, months, cumApi, cumHybrid, tokens: t }

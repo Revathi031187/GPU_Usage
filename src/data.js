@@ -79,7 +79,7 @@ export const BENEFITS = [
   { h: 'Data stays in your perimeter', p: 'Prompts and source code never leave your network — the case against sending IP to a public API.' },
   { h: 'Visibility into model usage', p: 'An intelligent proxy meters every request, so you finally see which teams and tasks drive spend.' },
   { h: 'Fast lane to production', p: 'Turnkey stack serves traffic in ~1 day on validated hardware, OpenAI-compatible — IDEs and tools unchanged.' },
-  { h: 'Runs anywhere, even air-gapped', p: 'Connected or fully disconnected, with Day-2 ops built in — up to 70% frontier-token spend removed.' },
+  { h: 'Runs anywhere, even air-gapped', p: `Connected or fully disconnected, with Day-2 ops built in — up to ${MAX_REDUCTION}% frontier-token spend removed.` },
 ]
 
 // default scenario state
@@ -88,7 +88,7 @@ export const DEFAULT_STATE = {
   seats: 400, tasks: 90, days: 22, calls: 1.5,
   frontier: 20, gpu: 'h200', growth: 30, horizon: 3, owns: 'no',
   opex: 50000, sub: 50000, disc: 15, dep: 3, util: 85,
-  localModel: 'llama70b', peak: 3, slaTps: 30, concPct: 10,
+  localModel: 'llama405b', peak: 3, slaTps: 30, concPct: 10,
   sortK: 'cost', sortDir: 1,
   cmpA: 'sonnet', cmpB: 'gpt4o',
 }

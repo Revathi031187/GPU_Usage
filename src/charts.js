@@ -1,4 +1,4 @@
-import { fmt, pct } from './calc.js'
+import { fmt, fmtFull, pct } from './calc.js'
 import { RAMP, ENTERPRISE_FLOOR, GARTNER_GROWTH } from './data.js'
 
 // ---- forecast cumulative-spend chart ----
@@ -71,7 +71,7 @@ export function buildBenchmark(S, f) {
   const lx = (v) => Math.log10(Math.max(lo, Math.min(hi, v)))
   const X = (v) => x0 + ((lx(v) - lx(lo)) / (lx(hi) - lx(lo))) * (x1 - x0)
   const marks = [
-    { v: ENTERPRISE_FLOOR, l: '$35K floor' },
+    { v: ENTERPRISE_FLOOR, l: fmt(ENTERPRISE_FLOOR) + ' floor' },
     { v: RAMP.p90, l: 'Ramp p90' },
     { v: RAMP.avg, l: 'Ramp avg' },
     { v: RAMP.p95, l: 'p95' },
@@ -91,12 +91,12 @@ export function buildBenchmark(S, f) {
   s += '<text x="' + ux + '" y="' + (yT - 24) + '" text-anchor="middle" style="fill:var(--accent-strong);font-size:11px;font-weight:700;font-family:var(--mono)">YOU ' + fmt(spend) + '</text>'
 
   let pos
-  if (spend < ENTERPRISE_FLOOR) pos = '<b>below</b> the $35K mid-market floor — at this level frontier APIs usually beat owning a GPU node'
-  else if (spend < RAMP.p90) pos = 'in the enterprise band, below Ramp’s 90th percentile ($73K/mo)'
+  if (spend < ENTERPRISE_FLOOR) pos = '<b>below</b> the ' + fmt(ENTERPRISE_FLOOR) + ' mid-market floor — at this level frontier APIs usually beat owning a GPU node'
+  else if (spend < RAMP.p90) pos = 'in the enterprise band, below Ramp’s 90th percentile (' + fmt(RAMP.p90) + '/mo)'
   else if (spend < RAMP.avg) pos = '<b>above</b> Ramp’s 90th percentile — heavier than most businesses'
-  else if (spend < RAMP.p95) pos = 'around the Ramp <b>average</b> ($140,842/mo) — top decile of AI spenders'
+  else if (spend < RAMP.p95) pos = 'around the Ramp <b>average</b> (' + fmtFull(RAMP.avg) + '/mo) — top decile of AI spenders'
   else if (spend < RAMP.p99) pos = 'between the 95th and 99th percentile — among the very heaviest AI spenders'
-  else pos = '<b>above</b> Ramp’s 99th percentile ($831K/mo) — hyperscale token spend'
+  else pos = '<b>above</b> Ramp’s 99th percentile (' + fmt(RAMP.p99) + '/mo) — hyperscale token spend'
   const note = '<span>Your all-API spend of <b class="num">' + fmt(spend) + '/mo</b> sits ' + pos + '. You model <b>' + pct(S.growth) + '/yr</b> growth vs Gartner’s <b>' + GARTNER_GROWTH + '%</b> industry forecast for 2026.</span>'
 
   return { svg: s, note }
